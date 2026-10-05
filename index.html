@@ -1,0 +1,1287 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <meta
+    name="description"
+    content="A state-driven task management application with CRUD functionality, filtering, and localStorage persistence."
+  >
+
+  <title>TaskFlow | Task Management App</title>
+
+  <style>
+    /* =========================================
+       CSS VARIABLES
+    ========================================== */
+
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+
+      --background: #f8fafc;
+      --surface: #ffffff;
+
+      --text: #1e293b;
+      --muted: #64748b;
+
+      --border: #e2e8f0;
+
+      --success: #16a34a;
+      --danger: #dc2626;
+
+      --shadow:
+        0 10px 30px rgba(15, 23, 42, 0.08);
+
+      --radius: 12px;
+    }
+
+    /* =========================================
+       RESET
+    ========================================== */
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+
+      font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+      line-height: 1.5;
+
+      background: var(--background);
+      color: var(--text);
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    button:focus-visible,
+    input:focus-visible {
+      outline: 3px solid #f59e0b;
+      outline-offset: 2px;
+    }
+
+
+    /* =========================================
+       APP CONTAINER
+    ========================================== */
+
+    .app {
+      width: min(94%, 850px);
+      margin: 0 auto;
+      padding: 30px 0 60px;
+    }
+
+
+    /* =========================================
+       HEADER
+    ========================================== */
+
+    .app-header {
+      margin-bottom: 25px;
+      text-align: center;
+    }
+
+    .app-header h1 {
+      font-size: clamp(2rem, 6vw, 3rem);
+      margin-bottom: 8px;
+    }
+
+    .app-header p {
+      color: var(--muted);
+    }
+
+
+    /* =========================================
+       CARD
+    ========================================== */
+
+    .card {
+      background: var(--surface);
+
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+
+      box-shadow: var(--shadow);
+
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+
+    /* =========================================
+       ADD TASK FORM
+    ========================================== */
+
+    .task-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .task-input {
+      width: 100%;
+
+      padding: 13px 15px;
+
+      border: 2px solid var(--border);
+      border-radius: 8px;
+
+      color: var(--text);
+      background: var(--surface);
+    }
+
+    .task-input:focus {
+      border-color: var(--primary);
+    }
+
+    .add-button {
+      border: none;
+      border-radius: 8px;
+
+      padding: 13px 20px;
+
+      color: white;
+      background: var(--primary);
+
+      font-weight: 700;
+
+      transition: 0.2s ease;
+    }
+
+    .add-button:hover {
+      background: var(--primary-dark);
+    }
+
+
+    /* =========================================
+       FILTERS
+    ========================================== */
+
+    .task-controls {
+      display: flex;
+
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .filter-button {
+      border: 1px solid var(--border);
+
+      background: var(--surface);
+      color: var(--text);
+
+      padding: 8px 14px;
+
+      border-radius: 999px;
+
+      transition: 0.2s ease;
+    }
+
+    .filter-button:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .filter-button.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+
+    /* =========================================
+       TASK LIST
+    ========================================== */
+
+    .task-list {
+      list-style: none;
+
+      display: flex;
+      flex-direction: column;
+
+      gap: 10px;
+    }
+
+    .task-item {
+      display: flex;
+
+      align-items: center;
+      justify-content: space-between;
+
+      gap: 15px;
+
+      padding: 15px;
+
+      border: 1px solid var(--border);
+      border-radius: 8px;
+
+      background: var(--surface);
+
+      transition: 0.2s ease;
+    }
+
+    .task-item:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    .task-content {
+      display: flex;
+
+      align-items: center;
+
+      gap: 12px;
+
+      min-width: 0;
+    }
+
+    .task-checkbox {
+      width: 20px;
+      height: 20px;
+
+      flex-shrink: 0;
+
+      cursor: pointer;
+    }
+
+    .task-title {
+      word-break: break-word;
+    }
+
+    .task-item.completed .task-title {
+      color: var(--muted);
+
+      text-decoration: line-through;
+    }
+
+
+    /* =========================================
+       TASK ACTIONS
+    ========================================== */
+
+    .task-actions {
+      display: flex;
+
+      gap: 6px;
+
+      flex-shrink: 0;
+    }
+
+    .action-button {
+      border: 1px solid var(--border);
+
+      background: var(--surface);
+
+      padding: 7px 10px;
+
+      border-radius: 6px;
+
+      transition: 0.2s ease;
+    }
+
+    .edit-button:hover {
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .delete-button:hover {
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+
+
+    /* =========================================
+       EMPTY STATE
+    ========================================== */
+
+    .empty-state {
+      text-align: center;
+
+      padding: 40px 20px;
+
+      color: var(--muted);
+    }
+
+
+    /* =========================================
+       FOOTER / STATISTICS
+    ========================================== */
+
+    .task-footer {
+      display: flex;
+
+      flex-direction: column;
+
+      gap: 12px;
+
+      color: var(--muted);
+
+      font-size: 0.9rem;
+    }
+
+    .clear-button {
+      border: none;
+
+      background: transparent;
+
+      color: var(--danger);
+
+      font-weight: 600;
+
+      padding: 0;
+
+      text-align: left;
+    }
+
+    .clear-button:hover {
+      text-decoration: underline;
+    }
+
+
+    /* =========================================
+       EDIT INPUT
+    ========================================== */
+
+    .edit-input {
+      width: 100%;
+
+      padding: 7px 10px;
+
+      border: 2px solid var(--primary);
+
+      border-radius: 5px;
+
+      color: var(--text);
+      background: var(--surface);
+    }
+
+
+    /* =========================================
+       DESKTOP RESPONSIVE LAYOUT
+    ========================================== */
+
+    @media (min-width: 600px) {
+
+      .app {
+        padding-top: 60px;
+      }
+
+      .task-form {
+        flex-direction: row;
+      }
+
+      .task-input {
+        flex: 1;
+      }
+
+      .task-controls {
+        flex-direction: row;
+
+        justify-content: space-between;
+
+        align-items: center;
+      }
+
+      .task-footer {
+        flex-direction: row;
+
+        justify-content: space-between;
+
+        align-items: center;
+      }
+
+    }
+
+
+    /* =========================================
+       REDUCED MOTION
+    ========================================== */
+
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      *::before,
+      *::after {
+        transition: none !important;
+      }
+
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="app">
+
+    <!-- =====================================
+         HEADER
+    ====================================== -->
+
+    <header class="app-header">
+
+      <h1>TaskFlow</h1>
+
+      <p>
+        A simple, fast and persistent task manager.
+      </p>
+
+    </header>
+
+
+    <!-- =====================================
+         ADD TASK
+    ====================================== -->
+
+    <section
+      class="card"
+      aria-labelledby="add-task-heading"
+    >
+
+      <h2
+        id="add-task-heading"
+        class="visually-hidden"
+      >
+        Add a new task
+      </h2>
+
+      <form
+        id="taskForm"
+        class="task-form"
+      >
+
+        <label
+          for="taskInput"
+          class="visually-hidden"
+        >
+          Task name
+        </label>
+
+        <input
+          type="text"
+          id="taskInput"
+          class="task-input"
+          placeholder="What needs to be done?"
+          autocomplete="off"
+          maxlength="150"
+          required
+        >
+
+        <button
+          type="submit"
+          class="add-button"
+        >
+          Add Task
+        </button>
+
+      </form>
+
+    </section>
+
+
+    <!-- =====================================
+         TASK CONTROLS
+    ====================================== -->
+
+    <section
+      class="card task-controls"
+      aria-label="Task controls"
+    >
+
+      <div
+        class="filters"
+        role="group"
+        aria-label="Filter tasks"
+      >
+
+        <button
+          type="button"
+          class="filter-button active"
+          data-filter="all"
+          aria-pressed="true"
+        >
+          All
+        </button>
+
+        <button
+          type="button"
+          class="filter-button"
+          data-filter="active"
+          aria-pressed="false"
+        >
+          Active
+        </button>
+
+        <button
+          type="button"
+          class="filter-button"
+          data-filter="completed"
+          aria-pressed="false"
+        >
+          Completed
+        </button>
+
+      </div>
+
+    </section>
+
+
+    <!-- =====================================
+         TASK LIST
+    ====================================== -->
+
+    <section
+      class="card"
+      aria-labelledby="task-list-heading"
+    >
+
+      <h2
+        id="task-list-heading"
+        class="visually-hidden"
+      >
+        Your tasks
+      </h2>
+
+      <ul
+        id="taskList"
+        class="task-list"
+        aria-live="polite"
+      >
+        <!-- Tasks dynamically inserted here -->
+      </ul>
+
+      <div
+        id="emptyState"
+        class="empty-state"
+        hidden
+      >
+        <p>No tasks found.</p>
+      </div>
+
+    </section>
+
+
+    <!-- =====================================
+         TASK FOOTER
+    ====================================== -->
+
+    <footer class="card task-footer">
+
+      <span id="taskCount">
+        0 tasks remaining
+      </span>
+
+      <button
+        type="button"
+        id="clearCompleted"
+        class="clear-button"
+      >
+        Clear completed
+      </button>
+
+    </footer>
+
+  </main>
+
+
+  <!-- =====================================
+       JAVASCRIPT
+  ====================================== -->
+
+  <script>
+
+    /* ========================================
+       APPLICATION STATE
+    ======================================== */
+
+    const STORAGE_KEY = "taskflow_tasks";
+
+    let tasks = loadTasks();
+
+    let currentFilter = "all";
+
+
+    /* ========================================
+       DOM ELEMENTS
+    ======================================== */
+
+    const taskForm =
+      document.getElementById("taskForm");
+
+    const taskInput =
+      document.getElementById("taskInput");
+
+    const taskList =
+      document.getElementById("taskList");
+
+    const emptyState =
+      document.getElementById("emptyState");
+
+    const taskCount =
+      document.getElementById("taskCount");
+
+    const clearCompleted =
+      document.getElementById("clearCompleted");
+
+    const filters =
+      document.querySelector(".filters");
+
+
+    /* ========================================
+       LOCAL STORAGE
+    ======================================== */
+
+    function loadTasks() {
+
+      try {
+
+        const storedTasks =
+          localStorage.getItem(STORAGE_KEY);
+
+        return storedTasks
+          ? JSON.parse(storedTasks)
+          : [];
+
+      } catch (error) {
+
+        console.error(
+          "Unable to load tasks:",
+          error
+        );
+
+        return [];
+      }
+    }
+
+
+    function saveTasks() {
+
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(tasks)
+      );
+    }
+
+
+    /* ========================================
+       CREATE
+    ======================================== */
+
+    taskForm.addEventListener(
+      "submit",
+      function (event) {
+
+        event.preventDefault();
+
+        const title =
+          taskInput.value.trim();
+
+        if (!title) {
+          return;
+        }
+
+
+        const newTask = {
+
+          id:
+            Date.now().toString(),
+
+          title: title,
+
+          completed: false,
+
+          createdAt:
+            new Date().toISOString()
+
+        };
+
+
+        tasks.push(newTask);
+
+        saveTasks();
+
+        renderTasks();
+
+        taskInput.value = "";
+
+        taskInput.focus();
+      }
+    );
+
+
+    /* ========================================
+       READ / RENDER
+    ======================================== */
+
+    function getFilteredTasks() {
+
+      switch (currentFilter) {
+
+        case "active":
+
+          return tasks.filter(
+            task => !task.completed
+          );
+
+        case "completed":
+
+          return tasks.filter(
+            task => task.completed
+          );
+
+        default:
+
+          return tasks;
+      }
+    }
+
+
+    function renderTasks() {
+
+      const visibleTasks =
+        getFilteredTasks();
+
+
+      /* Clear current DOM */
+
+      taskList.innerHTML = "";
+
+
+      /* Empty state */
+
+      if (visibleTasks.length === 0) {
+
+        emptyState.hidden = false;
+
+      } else {
+
+        emptyState.hidden = true;
+      }
+
+
+      /* Create dynamic DOM elements */
+
+      visibleTasks.forEach(
+        task => {
+
+          const listItem =
+            document.createElement("li");
+
+          listItem.className =
+            "task-item";
+
+          listItem.dataset.id =
+            task.id;
+
+
+          if (task.completed) {
+
+            listItem.classList.add(
+              "completed"
+            );
+          }
+
+
+          /* Task content */
+
+          const content =
+            document.createElement("div");
+
+          content.className =
+            "task-content";
+
+
+          /* Checkbox */
+
+          const checkbox =
+            document.createElement("input");
+
+          checkbox.type =
+            "checkbox";
+
+          checkbox.className =
+            "task-checkbox";
+
+          checkbox.checked =
+            task.completed;
+
+          checkbox.dataset.action =
+            "toggle";
+
+          checkbox.setAttribute(
+            "aria-label",
+            `Mark "${task.title}" as ${
+              task.completed
+                ? "active"
+                : "completed"
+            }`
+          );
+
+
+          /* Title */
+
+          const title =
+            document.createElement("span");
+
+          title.className =
+            "task-title";
+
+          title.textContent =
+            task.title;
+
+
+          content.appendChild(
+            checkbox
+          );
+
+          content.appendChild(
+            title
+          );
+
+
+          /* Action buttons */
+
+          const actions =
+            document.createElement("div");
+
+          actions.className =
+            "task-actions";
+
+
+          const editButton =
+            document.createElement("button");
+
+          editButton.type =
+            "button";
+
+          editButton.className =
+            "action-button edit-button";
+
+          editButton.dataset.action =
+            "edit";
+
+          editButton.textContent =
+            "Edit";
+
+          editButton.setAttribute(
+            "aria-label",
+            `Edit task "${task.title}"`
+          );
+
+
+          const deleteButton =
+            document.createElement("button");
+
+          deleteButton.type =
+            "button";
+
+          deleteButton.className =
+            "action-button delete-button";
+
+          deleteButton.dataset.action =
+            "delete";
+
+          deleteButton.textContent =
+            "Delete";
+
+          deleteButton.setAttribute(
+            "aria-label",
+            `Delete task "${task.title}"`
+          );
+
+
+          actions.appendChild(
+            editButton
+          );
+
+          actions.appendChild(
+            deleteButton
+          );
+
+
+          listItem.appendChild(
+            content
+          );
+
+          listItem.appendChild(
+            actions
+          );
+
+
+          taskList.appendChild(
+            listItem
+          );
+
+        }
+      );
+
+
+      updateTaskCount();
+    }
+
+
+    /* ========================================
+       UPDATE
+    ======================================== */
+
+    function toggleTask(taskId) {
+
+      tasks = tasks.map(
+        task => {
+
+          if (task.id === taskId) {
+
+            return {
+              ...task,
+              completed:
+                !task.completed
+            };
+          }
+
+          return task;
+        }
+      );
+
+
+      saveTasks();
+
+      renderTasks();
+    }
+
+
+    function editTask(taskId) {
+
+      const task =
+        tasks.find(
+          item => item.id === taskId
+        );
+
+      if (!task) {
+        return;
+      }
+
+
+      const newTitle =
+        prompt(
+          "Edit task:",
+          task.title
+        );
+
+
+      if (
+        newTitle === null ||
+        !newTitle.trim()
+      ) {
+
+        return;
+      }
+
+
+      tasks = tasks.map(
+        item => {
+
+          if (item.id === taskId) {
+
+            return {
+              ...item,
+              title:
+                newTitle.trim()
+            };
+          }
+
+          return item;
+        }
+      );
+
+
+      saveTasks();
+
+      renderTasks();
+    }
+
+
+    /* ========================================
+       DELETE
+    ======================================== */
+
+    function deleteTask(taskId) {
+
+      const task =
+        tasks.find(
+          item => item.id === taskId
+        );
+
+
+      if (!task) {
+        return;
+      }
+
+
+      const confirmed =
+        confirm(
+          `Delete "${task.title}"?`
+        );
+
+
+      if (!confirmed) {
+        return;
+      }
+
+
+      tasks =
+        tasks.filter(
+          item => item.id !== taskId
+        );
+
+
+      saveTasks();
+
+      renderTasks();
+    }
+
+
+    /* ========================================
+       EVENT DELEGATION
+    ======================================== */
+
+    taskList.addEventListener(
+      "click",
+      function (event) {
+
+        const action =
+          event.target.dataset.action;
+
+
+        if (!action) {
+          return;
+        }
+
+
+        const taskItem =
+          event.target.closest(
+            ".task-item"
+          );
+
+
+        if (!taskItem) {
+          return;
+        }
+
+
+        const taskId =
+          taskItem.dataset.id;
+
+
+        switch (action) {
+
+          case "edit":
+
+            editTask(taskId);
+
+            break;
+
+
+          case "delete":
+
+            deleteTask(taskId);
+
+            break;
+
+        }
+
+      }
+    );
+
+
+    /* Checkbox event delegation */
+
+    taskList.addEventListener(
+      "change",
+      function (event) {
+
+        if (
+          event.target.dataset.action
+          !== "toggle"
+        ) {
+          return;
+        }
+
+
+        const taskItem =
+          event.target.closest(
+            ".task-item"
+          );
+
+
+        if (!taskItem) {
+          return;
+        }
+
+
+        toggleTask(
+          taskItem.dataset.id
+        );
+      }
+    );
+
+
+    /* ========================================
+       FILTERING
+    ======================================== */
+
+    filters.addEventListener(
+      "click",
+      function (event) {
+
+        const button =
+          event.target.closest(
+            "[data-filter]"
+          );
+
+
+        if (!button) {
+          return;
+        }
+
+
+        currentFilter =
+          button.dataset.filter;
+
+
+        /* Update active button */
+
+        document
+          .querySelectorAll(
+            ".filter-button"
+          )
+          .forEach(
+            filterButton => {
+
+              const isActive =
+                filterButton
+                  .dataset.filter
+                === currentFilter;
+
+
+              filterButton.classList.toggle(
+                "active",
+                isActive
+              );
+
+
+              filterButton.setAttribute(
+                "aria-pressed",
+                String(isActive)
+              );
+
+            }
+          );
+
+
+        renderTasks();
+      }
+    );
+
+
+    /* ========================================
+       CLEAR COMPLETED
+    ======================================== */
+
+    clearCompleted.addEventListener(
+      "click",
+      function () {
+
+        const completedCount =
+          tasks.filter(
+            task => task.completed
+          ).length;
+
+
+        if (completedCount === 0) {
+          return;
+        }
+
+
+        const confirmed =
+          confirm(
+            `Delete ${completedCount} completed task(s)?`
+          );
+
+
+        if (!confirmed) {
+          return;
+        }
+
+
+        tasks =
+          tasks.filter(
+            task => !task.completed
+          );
+
+
+        saveTasks();
+
+        renderTasks();
+      }
+    );
+
+
+    /* ========================================
+       TASK COUNTER
+    ======================================== */
+
+    function updateTaskCount() {
+
+      const activeTasks =
+        tasks.filter(
+          task => !task.completed
+        ).length;
+
+
+      taskCount.textContent =
+        `${activeTasks} ${
+          activeTasks === 1
+            ? "task"
+            : "tasks"
+        } remaining`;
+    }
+
+
+    /* ========================================
+       INITIAL RENDER
+    ======================================== */
+
+    renderTasks();
+
+  </script>
+
+</body>
+</html>
+
